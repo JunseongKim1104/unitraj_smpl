@@ -44,7 +44,7 @@ class BaseDataset(Dataset):
             print('Loading training data...')
 
         for cnt, data_path in enumerate(self.data_path):
-            phase, dataset_name = data_path.split('/')[-2],data_path.split('/')[-1]
+            phase, dataset_name = data_path.split('\\')[-2],data_path.split('\\')[-1]
             self.cache_path = os.path.join(self.config['cache_path'], dataset_name, phase)
 
             data_usage_this_dataset = self.config['max_data_num'][cnt]
@@ -475,7 +475,7 @@ class BaseDataset(Dataset):
             except:
                 input_dict[key] = val_list
 
-        input_dict['center_objects_type'] = input_dict['center_objects_type'].numpy()
+        # input_dict['center_objects_type'] = input_dict['center_objects_type'].numpy()
 
         batch_dict = {'batch_size': batch_size, 'input_dict': input_dict, 'batch_sample_count': batch_size}
         return batch_dict
