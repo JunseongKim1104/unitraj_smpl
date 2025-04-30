@@ -899,15 +899,15 @@ class Simpl(BaseModel):
         all_miss_rate = torch.cat(all_miss_rate)
         all_brier_fde = torch.cat(all_brier_fde)
         
-        # Create loss dictionary
+        # Create loss dictionary with raw values
         loss_dict = {
-            'minADE6': all_min_ade.mean().item(),
-            'minFDE6': all_min_fde.mean().item(),
-            'miss_rate': all_miss_rate.mean().item(),
-            'brier_fde': all_brier_fde.mean().item(),
-            'cls_loss': avg_cls_loss.item(),
-            'reg_loss': avg_reg_loss.item(),
-            'total_loss': total_loss.item()
+            'minADE6': all_min_ade,
+            'minFDE6': all_min_fde,
+            'miss_rate': all_miss_rate,
+            'brier_fde': all_brier_fde,
+            'cls_loss': torch.tensor([avg_cls_loss]),
+            'reg_loss': torch.tensor([avg_reg_loss]),
+            'total_loss': torch.tensor([total_loss])
         }
         
         # Log metrics by dataset
@@ -920,13 +920,16 @@ class Simpl(BaseModel):
             for dataset_name in unique_dataset_names:
                 dataset_mask = dataset_names == dataset_name
                 if dataset_mask.any():
-                    dataset_objects = dataset_mask.sum()
-                    loss_dict[f'{dataset_name}/minADE6'] = all_min_ade[dataset_mask].mean().item()
-                    loss_dict[f'{dataset_name}/minFDE6'] = all_min_fde[dataset_mask].mean().item()
-                    loss_dict[f'{dataset_name}/miss_rate'] = all_miss_rate[dataset_mask].mean().item()
-                    loss_dict[f'{dataset_name}/brier_fde'] = all_brier_fde[dataset_mask].mean().item()
+                    loss_dict[f'{dataset_name}/minADE6'] = all_min_ade[dataset_mask]
+                    loss_dict[f'{dataset_name}/minFDE6'] = all_min_fde[dataset_mask]
+                    loss_dict[f'{dataset_name}/miss_rate'] = all_miss_rate[dataset_mask]
+                    loss_dict[f'{dataset_name}/brier_fde'] = all_brier_fde[dataset_mask]
+        
+        # Calculate sizes and means
+        size_dict = {key: len(value) for key, value in loss_dict.items()}
+        loss_dict = {key: value.mean().item() for key, value in loss_dict.items()}
         
         # Log all metrics
         for k, v in loss_dict.items():
-            self.log(f'{status}/{k}', v, on_step=False, on_epoch=True, sync_dist=True, batch_size=total_objects)
+            self.log(f'{status}/{k}', v, on_step=False, on_epoch=True, sync_dist=True, batch_size=size_dict[k])
             
