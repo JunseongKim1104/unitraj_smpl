@@ -733,14 +733,18 @@ class Simpl(BaseModel):
         mode_logits, traj, vels = self.decoder(actors, actor_idcs)
           
         # Calculate loss
-        loss = self.compute_loss(mode_logits, traj, actors_gt, actor_idcs)
+        loss_dict = self.compute_loss(mode_logits, traj, actors_gt, actor_idcs)
         
+        # Convert loss values to float
+        for k, v in loss_dict.items():
+            if isinstance(v, torch.Tensor):
+                loss_dict[k] = v.item()
 
         output = {}
         output['predicted_probability'] = mode_logits  
         output['predicted_trajectory'] = traj 
         
-        return output, loss['total_loss']
+        return output, loss_dict['total_loss']
 
     def compute_loss(self, mode_logits, traj, actors_gt, actor_idcs):
         """
@@ -884,21 +888,21 @@ class Simpl(BaseModel):
             all_miss_rate.append(miss_rate)
             all_brier_fde.append(brier_fde)
             
-            # Log metrics for this batch with explicit batch size
-            self.log(f'{status}/batch_{batch_idx}/minADE6', min_ade.mean(), on_step=True, on_epoch=False, batch_size=num_objects)
-            self.log(f'{status}/batch_{batch_idx}/minFDE6', min_fde.mean(), on_step=True, on_epoch=False, batch_size=num_objects)
-            self.log(f'{status}/batch_{batch_idx}/miss_rate', miss_rate.mean(), on_step=True, on_epoch=False, batch_size=num_objects)
-            self.log(f'{status}/batch_{batch_idx}/brier_fde', brier_fde.mean(), on_step=True, on_epoch=False, batch_size=num_objects)
+            # Convert metrics to float and log with explicit batch size
+            self.log(f'{status}/batch_{batch_idx}/minADE6', min_ade.mean().item(), on_step=True, on_epoch=False, batch_size=num_objects, sync_dist=True)
+            self.log(f'{status}/batch_{batch_idx}/minFDE6', min_fde.mean().item(), on_step=True, on_epoch=False, batch_size=num_objects, sync_dist=True)
+            self.log(f'{status}/batch_{batch_idx}/miss_rate', miss_rate.mean().item(), on_step=True, on_epoch=False, batch_size=num_objects, sync_dist=True)
+            self.log(f'{status}/batch_{batch_idx}/brier_fde', brier_fde.mean().item(), on_step=True, on_epoch=False, batch_size=num_objects, sync_dist=True)
         
         # Calculate and log average losses
         avg_cls_loss = total_cls_loss / total_objects
         avg_reg_loss = total_reg_loss / total_objects
         total_loss = cls_coef * avg_cls_loss + reg_coef * avg_reg_loss
         
-        # Log epoch-level metrics with explicit batch size
-        self.log(f'{status}/cls_loss', avg_cls_loss, on_step=False, on_epoch=True, batch_size=total_objects)
-        self.log(f'{status}/reg_loss', avg_reg_loss, on_step=False, on_epoch=True, batch_size=total_objects)
-        self.log(f'{status}/total_loss', total_loss, on_step=False, on_epoch=True, batch_size=total_objects)
+        # Convert losses to float and log with explicit batch size
+        self.log(f'{status}/cls_loss', avg_cls_loss.item(), on_step=False, on_epoch=True, batch_size=total_objects, sync_dist=True)
+        self.log(f'{status}/reg_loss', avg_reg_loss.item(), on_step=False, on_epoch=True, batch_size=total_objects, sync_dist=True)
+        self.log(f'{status}/total_loss', total_loss.item(), on_step=False, on_epoch=True, batch_size=total_objects, sync_dist=True)
         
         # Calculate and log overall metrics
         all_min_ade = torch.cat(all_min_ade)
@@ -906,11 +910,11 @@ class Simpl(BaseModel):
         all_miss_rate = torch.cat(all_miss_rate)
         all_brier_fde = torch.cat(all_brier_fde)
         
-        # Log epoch-level metrics with explicit batch size
-        self.log(f'{status}/minADE6', all_min_ade.mean(), on_step=False, on_epoch=True, batch_size=total_objects)
-        self.log(f'{status}/minFDE6', all_min_fde.mean(), on_step=False, on_epoch=True, batch_size=total_objects)
-        self.log(f'{status}/miss_rate', all_miss_rate.mean(), on_step=False, on_epoch=True, batch_size=total_objects)
-        self.log(f'{status}/brier_fde', all_brier_fde.mean(), on_step=False, on_epoch=True, batch_size=total_objects)
+        # Convert metrics to float and log with explicit batch size
+        self.log(f'{status}/minADE6', all_min_ade.mean().item(), on_step=False, on_epoch=True, batch_size=total_objects, sync_dist=True)
+        self.log(f'{status}/minFDE6', all_min_fde.mean().item(), on_step=False, on_epoch=True, batch_size=total_objects, sync_dist=True)
+        self.log(f'{status}/miss_rate', all_miss_rate.mean().item(), on_step=False, on_epoch=True, batch_size=total_objects, sync_dist=True)
+        self.log(f'{status}/brier_fde', all_brier_fde.mean().item(), on_step=False, on_epoch=True, batch_size=total_objects, sync_dist=True)
         
         # Log additional metrics by dataset
         if status == 'val' and self.config.get('eval', False):
@@ -923,9 +927,9 @@ class Simpl(BaseModel):
                 dataset_mask = dataset_names == dataset_name
                 if dataset_mask.any():
                     dataset_objects = dataset_mask.sum()
-                    self.log(f'{status}/{dataset_name}/minADE6', all_min_ade[dataset_mask].mean(), on_step=False, on_epoch=True, batch_size=dataset_objects)
-                    self.log(f'{status}/{dataset_name}/minFDE6', all_min_fde[dataset_mask].mean(), on_step=False, on_epoch=True, batch_size=dataset_objects)
-                    self.log(f'{status}/{dataset_name}/miss_rate', all_miss_rate[dataset_mask].mean(), on_step=False, on_epoch=True, batch_size=dataset_objects)
-                    self.log(f'{status}/{dataset_name}/brier_fde', all_brier_fde[dataset_mask].mean(), on_step=False, on_epoch=True, batch_size=dataset_objects)
+                    self.log(f'{status}/{dataset_name}/minADE6', all_min_ade[dataset_mask].mean().item(), on_step=False, on_epoch=True, batch_size=dataset_objects, sync_dist=True)
+                    self.log(f'{status}/{dataset_name}/minFDE6', all_min_fde[dataset_mask].mean().item(), on_step=False, on_epoch=True, batch_size=dataset_objects, sync_dist=True)
+                    self.log(f'{status}/{dataset_name}/miss_rate', all_miss_rate[dataset_mask].mean().item(), on_step=False, on_epoch=True, batch_size=dataset_objects, sync_dist=True)
+                    self.log(f'{status}/{dataset_name}/brier_fde', all_brier_fde[dataset_mask].mean().item(), on_step=False, on_epoch=True, batch_size=dataset_objects, sync_dist=True)
             
            
