@@ -2,3 +2,6 @@
 /data_samples
 /tmp
 /unitraj_ckpt
+**/UniTraj.egg-info
+**/build/
+**/echo/
