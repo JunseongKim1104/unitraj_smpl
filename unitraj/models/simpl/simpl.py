@@ -746,6 +746,17 @@ class Simpl(BaseModel):
         
         return output, loss_dict['total_loss']
 
+    def training_step(self, batch, batch_idx):
+        prediction, loss = self.forward(batch)
+        self.log_info(batch, batch_idx, prediction, status='train')
+        return loss
+
+    def validation_step(self, batch, batch_idx):
+        prediction, loss = self.forward(batch)
+        self.compute_official_evaluation(batch, prediction)
+        self.log_info(batch, batch_idx, prediction, status='val')
+        return loss
+
     def compute_loss(self, mode_logits, traj, actors_gt, actor_idcs):
         """
         Compute loss for trajectory prediction.

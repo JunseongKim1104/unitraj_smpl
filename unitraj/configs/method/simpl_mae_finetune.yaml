@@ -1,0 +1,69 @@
+method:
+  model_name: "simpl-mae-finetune"
+  
+  # Global parameters
+  g_num_modes: 6
+  g_obs_len: 50
+  g_pred_len: 60
+  
+  # Network parameters
+  in_actor: 14
+  d_actor: 128
+  n_fpn_scale: 4
+  in_lane: 24
+  d_lane: 128
+  d_rpe_in: 5
+  d_rpe: 128
+  d_embed: 128
+  n_scene_layer: 4
+  n_scene_head: 8
+  decoder_depth: 4
+  mlp_ratio: 4.0
+  qkv_bias: false
+  dropout: 0.1
+  update_edge: true
+  
+  # Trajectory parameters
+  param_out: "bezier"  # bezier/monomial/none
+  param_order: 7  # 7-th order polynomials
+  
+  # Loss parameters
+  cls_coef: 0.1
+  reg_coef: 0.9
+  loss_type: 'ADE'  # 'ADE' or 'FDE'
+  
+  mgn: 0.2
+  cls_th: 2.0
+  cls_ignore: 0.2
+  yaw_loss: true
+  
+  # Training parameters
+  train_batch_size: 32
+  eval_batch_size: 32
+  max_epochs: 100
+  grad_clip_norm: 1.0
+  
+  # Optimizer parameters
+  opt: "adam"
+  weight_decay: 0.0
+  lr_scale_func: "none"  # none/sqrt/linear
+  
+  # Scheduler parameters
+  scheduler: "polyline"
+  init_lr: 1e-5  # Lower learning rate for fine-tuning
+  milestones: [0, 5, 35, 40]
+  values: [1e-5, 1e-4, 1e-4, 1e-5]
+  
+  # Evaluation parameters
+  data_ver: "av2"
+  miss_thres: 2.0
+
+  # Pretrained model parameters
+  use_pretrained: true  # Use pretrained model for fine-tuning
+  pretrained_path: "path/to/pretrained/model.ckpt"  # Path to pretrained model checkpoint
+  finetune_layers: [
+    # Decoder related layers
+    "decoder.multihead_proj",
+    "decoder.cls",
+    "decoder.reg"
+  ]  # Only finetune the decoder layers 
